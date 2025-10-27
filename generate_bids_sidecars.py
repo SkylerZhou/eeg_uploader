@@ -104,7 +104,6 @@ def handle_eeg_json(path_info, output_base_dir):
     try:
         if eeg_sidecar.validate():
             saved_path = eeg_sidecar.save(output_dir=output_base_dir)
-            print(f"    ✓ Saved: {saved_path}")
             return True
     except Exception as e:
         print(f"    ✗ Error: {e}")
@@ -156,7 +155,6 @@ def handle_sessions_tsv(patient_id, sessions_data, output_base_dir):
     try:
         if sessions_sidecar.validate():
             saved_path = sessions_sidecar.save(output_dir=output_base_dir)
-            print(f"    ✓ Saved: {saved_path}")
             return True
     except Exception as e:
         print(f"    ✗ Error: {e}")
@@ -230,7 +228,6 @@ def handle_channels_tsv(path_info, output_base_dir):
     try:
         if channels_sidecar.validate():
             saved_path = channels_sidecar.save(output_dir=output_base_dir)
-            print(f"    ✓ Saved: {saved_path}")
             return True
     except Exception as e:
         print(f"    ✗ Error: {e}")
@@ -244,11 +241,7 @@ def main():
     """Main execution function."""
     script_dir = Path(__file__).parent
     output_dir = script_dir / "output"
-    
-    print("=" * 50)
-    print("BIDS Sidecar Generator")
-    print("=" * 50)
-    
+        
     # Find all EEG paths
     print("\n1. Discovering EEG pathes...")
     pathes = find_bids_path(output_dir)
@@ -297,11 +290,9 @@ def main():
             failed_sessions += 1
     
     # Summary
-    print("\n" + "=" * 50)
     print(f"EEG JSON: {successful_eeg} successful, {failed_eeg} failed")
     print(f"Channels TSV: {successful_channels} successful, {failed_channels} failed")
     print(f"Sessions TSV: {successful_sessions} successful, {failed_sessions} failed")
-    print("=" * 50)
     
     return 0 if (failed_eeg == 0 and failed_channels == 0 and failed_sessions == 0) else 1
 

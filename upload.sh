@@ -5,8 +5,12 @@
 # --- Configuration ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUTPUT_DIR="$SCRIPT_DIR/output"
-LOG_FILE="logs/upload_log.txt"
-RESULTS_FILE="logs/upload_results.csv"
+LOG_DIR="$SCRIPT_DIR/logs"
+LOG_FILE="$LOG_DIR/upload_log.txt"
+RESULTS_FILE="$LOG_DIR/upload_results.csv"
+
+# Ensure logs directory exists
+mkdir -p "$LOG_DIR"
 
 # Initialize results file with header if it doesn't exist
 if [[ ! -f "$RESULTS_FILE" ]]; then
