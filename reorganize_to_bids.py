@@ -81,12 +81,8 @@ def create_bids_structure(files_by_patient, input_dir, output_dir):
         for file_info in files:
             files_by_age[file_info['age']].append(file_info) # get age from files_by_patient created by get_files_by_patient
         
-        # Determine baseline (smallest age)
         ages = sorted(files_by_age.keys())
-        baseline_age = ages[0]
-        
         print(f"  Ages found: {ages}")
-        print(f"  Baseline age: {baseline_age}")
         
         # Get site from first file; create dataset name PRV-{patient_id}
         site = files[0]['site']
@@ -96,14 +92,11 @@ def create_bids_structure(files_by_patient, input_dir, output_dir):
         base_path = Path(output_dir) / dataset_name / "primary" / f"sub-{dataset_name}" # e.g. output/PRV-4ZHY/primary/sub-PRV-4ZHY
         
         for age in ages:
-            # Determine session type
-            if age == baseline_age:
-                session = f"ses-baseline-{age}"
-            else:
-                session = f"ses-followup-{age}"
+            # Create session name with visit-m<age> format
+            session = f"ses-visit-m{age}"
             
             # Create session directory
-            session_path = base_path / session / "eeg" # e.g. output/PRV-4ZHY/primary/sub-PRV-4ZHY/ses-baseline-15/eeg
+            session_path = base_path / session / "eeg" # e.g. output/PRV-4ZHY/primary/sub-PRV-4ZHY/ses-visit-m15/eeg
             session_path.mkdir(parents=True, exist_ok=True)
                         
             # Process files for this age
@@ -123,8 +116,6 @@ def create_bids_structure(files_by_patient, input_dir, output_dir):
 
 def main():
 
-    print("Starting reorganization to BIDS-like structure...")
-
     # Paths
     script_dir = Path(__file__).parent
     input_dir = script_dir / "input"
@@ -143,12 +134,11 @@ def main():
     # Get files grouped by patient
     files_by_patient = get_files_by_patient(input_dir, patient_identifiers)
     
-    print(f"\nFound files for {len(files_by_patient)} patients")
+    print(f"Found files for {len(files_by_patient)} patients")
     
     # Create BIDS structure
     create_bids_structure(files_by_patient, input_dir, output_dir)
     
-    print(f"\nReorganization complete! Check the '{output_dir}' directory.")
 
 if __name__ == "__main__":
     main()
