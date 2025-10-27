@@ -35,7 +35,7 @@ class Sidecar(ABC): # ABC = Abstract Base Class
     default_bids_path: str = "bids_root/"
 
     _logger: Optional[logging.Logger] = None
-    _log_dir: str = "output/logs"  
+    _log_dir: str = "logs/sidecar_logs"
 
     json_indent: int = 2
 
