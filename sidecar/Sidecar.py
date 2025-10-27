@@ -1,5 +1,4 @@
 # Base Class: provides the core infrastructure for all sidecar files.
-# 
 
 import os
 import sys
@@ -14,14 +13,23 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from logger.setup_logger import setup_logger
 
 _logger_lock = threading.Lock()
-class Sidecar(ABC):
+class Sidecar(ABC): # ABC = Abstract Base Class
     """
     Base class for all BIDS sidecar files.
     Handles data management, path handling, validation, and persistence.
+
+    Provides common functionalities:
+     - __init__() - initialization logic
+    - save() - saves JSON to disk
+    - to_dict() - converts to dictionary
+    - to_json() - converts to JSON string
+    - get_logger() - logging setup
+
+    A template that says any subclass must have these features.
     """
 
     # Exclude these fields from being treated as data fields
-    excluded_fields = {"output_dir", "input_dir", "bids_path"}
+    excluded_fields = {"output_dir", "input_dir", "bids_path", "filename"}
 
     default_filename: str = "sidecar.json"
     default_bids_path: str = "bids_root/"
@@ -35,12 +43,14 @@ class Sidecar(ABC):
     RECOMMENDED_FIELDS = {}
     OPTIONAL_FIELDS = {}
 
+
+    # ==== Class Methods ==== 
     @classmethod
     def configure_logger(cls, log_dir: str):
         """
         Allows user to set a custom log directory before instantiation.
         Example:
-            Sidecar.configure_logger("custom_logs/")
+            Sidecar.configure_logger("logs/sidecar_logs/")
         """
         cls._log_dir = log_dir
         # If logger already exists, reconfigure it
@@ -52,13 +62,38 @@ class Sidecar(ABC):
 
     @classmethod
     def get_logger(cls):
+        """
+        Returns a logger instance for the Sidecar class.
+        Initializes the logger if it hasn't been created yet.
+        """
         with _logger_lock:
             if cls._logger is None:
                 cls._logger = setup_logger("sidecar_data_generator", log_dir=cls._log_dir)
                 cls._logger.debug(f"Logger initialized for Sidecar (log_dir={cls._log_dir})")
             return cls._logger
 
+
+
+    # ==== Instance Methods ==== 
     def __init__(self, fields: Dict[str, Any], **kwargs):
+        """
+        Purpose:
+        Get the logger instance
+        Initialize Sidecar with given fields and paths.
+        Merges user-supplied fields with defaults.
+        Separate data into 2 categories:
+            - self.paths: contains path-related fields (those in excluded_fields)
+            - self.data: contains actual sidecar data (everything from fields)
+        Dynamically creates attributes for each data field using setattr()
+        Handles optional json_indent parameter 
+
+        Example:
+        sidecar = Sidecar(
+        fields={"Temperature": 20, "Humidity": 60},
+        bids_path="sub-01/ses-01/", your specific BIDS path
+        output_dir="output/data/" optional, a basic output directory for storing sidecar files
+)
+        """
         self.log = self.get_logger()
 
         if not isinstance(fields, dict):
@@ -70,6 +105,10 @@ class Sidecar(ABC):
         self.paths = {k: v for k, v in merged_paths.items() if k in self.excluded_fields}
         self.data = {k: v for k, v in fields.items() if k not in self.excluded_fields}
 
+        # Handle custom filename if provided
+        if "filename" in kwargs:
+            self.default_filename = kwargs["filename"]
+
         for key, value in self.data.items():
             if not hasattr(self, key):
                 setattr(self, key, value)
@@ -80,18 +119,39 @@ class Sidecar(ABC):
 
     @abstractmethod
     def validate(self):
-        """Each sidecar must define its own validation logic."""
+        """Forces subclasses to implement domain-specific validation rules."""
         pass
 
     def to_dict(self):
+        """Returns the sidecar data (self.data) as a dictionary."""
         return self.data
 
     def to_json(self, indent: int = 2) -> str:
+        """Converts the sidecar data to a JSON string."""
         return json.dumps(self.data, indent=indent)
 
     def save(self, output_dir: str = None, flat: bool = False, json_indent: Optional[int] = None) -> str:
+        """
+        Saves the sidecar data as a JSON file to disk.
+        
+        Steps:
+        1. Indentation: Determine JSON indentation level.
+        2. Output Directory: Use provided output_dir or default to self.paths["output_dir"] or "output/json".
+        3. Filename: Gets the filename from default_filename attribute.
+        4. File Path:
+            - If flat=True, save directly under output_dir.
+            - If flat=False, save under BIDS path structure within output_dir.
+        5. Directory Creation: Creates any missing directories.
+        6. File Writing: Writes JSON data with proper formatting
+        7. Logging
+        8. Return Value: Returns the full path to the saved file.
+
+        Example:
+            sidecar.save(output_dir="output/json", flat=False, json_indent=4)
+        """
         if json_indent is None:
                 json_indent = getattr(self, "json_indent", 2)
+        
         if not output_dir:
             output_dir = self.paths.get("output_dir", "output/json")
 

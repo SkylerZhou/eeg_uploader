@@ -1,6 +1,10 @@
+# A specific and concrete subclass that inherits from the abstract Sidecar class
+#   Inherits common functionality (save(), to_dict(), to_json(), get_logger(), etc) 
+#   and adds dataset_description.json specific logic
+
 from jsonschema import Draft202012Validator
 from typing import Dict, Any
-from Sidecar import Sidecar
+from .Sidecar import Sidecar # DatasetDescriptionSidecar.py is a subclass of Sidecar.py, this line means DatasetDescriptionSidecar.py inherits from Sidecar.py
 
 
 class DatasetDescriptionSidecar(Sidecar):

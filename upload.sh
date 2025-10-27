@@ -5,8 +5,8 @@
 # --- Configuration ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUTPUT_DIR="$SCRIPT_DIR/output"
-LOG_FILE="upload_log.txt"
-RESULTS_FILE="upload_results.csv"
+LOG_FILE="logs/upload_log.txt"
+RESULTS_FILE="logs/upload_results.csv"
 
 # Initialize results file with header if it doesn't exist
 if [[ ! -f "$RESULTS_FILE" ]]; then
@@ -35,6 +35,15 @@ run_reorganization() {
     cd "$SCRIPT_DIR"
     if ! python3 reorganize_to_bids.py; then
         log_message "[ERROR]: reorganize_to_bids.py failed"
+        exit 1
+    fi
+}
+
+generate_sidecars() {
+
+    cd "$SCRIPT_DIR"
+    if ! python3 generate_bids_sidecars.py; then
+        log_message "[ERROR]: generate_bids_sidecars.py failed"
         exit 1
     fi
 }
@@ -97,17 +106,18 @@ upload_dataset_to_pennsieve() {
     fi
 
     # === STEP 5: Upload manifest with retries ===
+    log_message "   Uploading manifest $manifest_id..."
     local max_retries=3
     for attempt in $(seq 1 $max_retries); do
         
-        # Use timeout and redirect to prevent hanging
+        # Use timeout and redirect all output to log file for clean console
         if gtimeout 1800 pennsieve upload manifest "$manifest_id" </dev/null >>"$LOG_FILE" 2>&1; then
             log_message "   Successfully uploaded $dataset_name"
             record_result "$dataset_name" "SUCCESS" "$dataset_node_id" "$manifest_id"
             return 0
         fi
         
-        log_message "   Upload attempt $attempt failed"
+        log_message "   Upload attempt $attempt failed, retrying..."
         sleep $((attempt * 10))
     done
     
@@ -128,6 +138,14 @@ main() {
     log_message "================================================"
     log_message ""
     
+    # STEP 2: Generate BIDS sidecars
+    log_message "================================================"
+    log_message "BIDS Sidecar Generator Started:"
+    generate_sidecars
+    log_message "BIDS Sidecar Generator completed"
+    log_message "================================================"
+    log_message ""
+    
     # Find all PRV-* folders
     local dataset_folders=()
     while IFS= read -r -d '' folder; do
@@ -139,7 +157,7 @@ main() {
     local failed_uploads=0
     local total_datasets=${#dataset_folders[@]}
     
-    # STEP 2: Upload datasets to Pennsieve
+    # STEP 3: Upload datasets to Pennsieve
     log_message "================================================"
     log_message "Pennsieve Uploader Started:"
     for dataset_folder in "${dataset_folders[@]}"; do

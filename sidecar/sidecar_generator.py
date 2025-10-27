@@ -1,3 +1,5 @@
+# demo showing how to use the DatasetDescriptionSidecar.py 
+
 from DatsetDescriptionSidecar import DatasetDescriptionSidecar
 
 def main():
