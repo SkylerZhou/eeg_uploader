@@ -89,7 +89,7 @@ class Sidecar(ABC): # ABC = Abstract Base Class
 
         Example:
         sidecar = Sidecar(
-        fields={"Temperature": 20, "Humidity": 60},
+        fields={"Temperature": 20, "Humidity": 60}, fields you want to modify
         bids_path="sub-01/ses-01/", your specific BIDS path
         output_dir="output/data/" optional, a basic output directory for storing sidecar files
 )
@@ -129,25 +129,38 @@ class Sidecar(ABC): # ABC = Abstract Base Class
     def to_json(self, indent: int = 2) -> str:
         """Converts the sidecar data to a JSON string."""
         return json.dumps(self.data, indent=indent)
-
-    def save(self, output_dir: str = None, flat: bool = False, json_indent: Optional[int] = None) -> str:
+    
+    def to_tsv(self) -> str:
         """
-        Saves the sidecar data as a JSON file to disk.
+        Converts the sidecar data to a TSV string.
+        Expects self.data to be a list of dictionaries (rows).
+        Returns a TSV formatted string.
+        """
+        import csv
+        import io
         
-        Steps:
-        1. Indentation: Determine JSON indentation level.
-        2. Output Directory: Use provided output_dir or default to self.paths["output_dir"] or "output/json".
-        3. Filename: Gets the filename from default_filename attribute.
-        4. File Path:
-            - If flat=True, save directly under output_dir.
-            - If flat=False, save under BIDS path structure within output_dir.
-        5. Directory Creation: Creates any missing directories.
-        6. File Writing: Writes JSON data with proper formatting
-        7. Logging
-        8. Return Value: Returns the full path to the saved file.
+        if not isinstance(self.data, list) or not self.data:
+            raise ValueError("TSV format requires data to be a non-empty list of dictionaries")
+        
+        output = io.StringIO()
+        fieldnames = self.data[0].keys()
+        writer = csv.DictWriter(output, fieldnames=fieldnames, delimiter='\t')
+        writer.writeheader()
+        writer.writerows(self.data)
+        return output.getvalue()
 
-        Example:
-            sidecar.save(output_dir="output/json", flat=False, json_indent=4)
+    def save(self, output_dir: str = None, flat: bool = False, json_indent: Optional[int] = None, file_format: str = "json") -> str:
+        """
+        Saves the sidecar data as a JSON or TSV file to disk.
+        
+        Args:
+            output_dir: Directory to save the file
+            flat: If True, save directly under output_dir; if False, use BIDS path structure
+            json_indent: Indentation level for JSON (ignored for TSV)
+            file_format: "json" or "tsv" (default: "json")
+        
+        Returns:
+            str: Full path to the saved file
         """
         if json_indent is None:
                 json_indent = getattr(self, "json_indent", 2)
@@ -164,8 +177,14 @@ class Sidecar(ABC): # ABC = Abstract Base Class
             file_path = os.path.join(output_dir, bids_path, filename)
 
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, "w") as f:
-            json.dump(self.data, f, indent=json_indent, default=str)
+        
+        # Write file based on format
+        if file_format == "tsv":
+            with open(file_path, "w", newline='', encoding='utf-8') as f:
+                f.write(self.to_tsv())
+        else:  # default to json
+            with open(file_path, "w") as f:
+                json.dump(self.data, f, indent=json_indent, default=str)
 
         self.log.info(f"Saved {self.__class__.__name__} to {file_path}")
         return file_path
