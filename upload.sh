@@ -46,9 +46,6 @@ upload_dataset_to_pennsieve() {
     dataset_name=$(basename "$dataset_folder")
     
     log_message ""
-    log_message "=================================================="
-    log_message "Uploading dataset: $dataset_name"
-    log_message "=================================================="
     
     # Create dataset description and tags
     local description="Auto-migrated EEG dataset for $dataset_name from PREVeNT study"
@@ -100,15 +97,14 @@ upload_dataset_to_pennsieve() {
         record_result "$dataset_name" "FAILED_MANIFEST_ID" "$dataset_node_id" ""
         return 1
     fi
-    
-    
-    # === STEP 5: Upload manifest with retries ===
+
+    === STEP 5: Upload manifest with retries ===
     local max_retries=3
     for attempt in $(seq 1 $max_retries); do
         log_message "Upload attempt $attempt/$max_retries for manifest $manifest_id"
         
         # Use timeout and redirect to prevent hanging
-        if timeout 1800 pennsieve upload manifest "$manifest_id" </dev/null >>"$LOG_FILE" 2>&1; then
+        if gtimeout 1800 pennsieve upload manifest "$manifest_id" </dev/null >>"$LOG_FILE" 2>&1; then
             log_message "Successfully uploaded $dataset_name"
             record_result "$dataset_name" "SUCCESS" "$dataset_node_id" "$manifest_id"
             return 0
@@ -152,7 +148,7 @@ main() {
         
         # Progress update
         local processed=$((successful_uploads + failed_uploads))
-        log_message "📊 Progress: $processed/$total_datasets processed (✅ $successful_uploads successful, ❌ $failed_uploads failed)"
+        log_message "📊 Progress: $processed/$total_datasets processed ($successful_uploads successful, $failed_uploads failed)"
     done
     
     

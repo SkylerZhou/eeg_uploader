@@ -28,6 +28,7 @@ output/
 ```bash
 pip install -r requirements.txt
 ```
+Also need to make sure you have coreutils (timeout) installed locally.
 
 2. Ensure your files are in the `input/` directory and patient identifiers are in `patient_identifiers.csv`
 
