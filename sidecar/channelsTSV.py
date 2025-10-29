@@ -129,6 +129,7 @@ class ChannelsTSV(Sidecar):
         channel_upper = channel_name.upper()
         
         # Specific EEG channel names (10-20 system)
+        # FpZ, Oz, Status, T1, T2,
         eeg_channels = {
             "FP1", "F3", "C3", "P3", "O1", 
             "FP2", "F4", "C4", "P4", "O2", 
