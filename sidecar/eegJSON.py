@@ -2,7 +2,7 @@ from jsonschema import Draft202012Validator
 from typing import Dict, Any
 from .Sidecar import Sidecar 
 
-class eegJSON(Sidecar):
+class EegJSON(Sidecar):
     """
     Represents the eegJSON.json BIDS sidecar.
 

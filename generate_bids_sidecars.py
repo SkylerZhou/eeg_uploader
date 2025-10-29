@@ -8,9 +8,14 @@ import os
 import sys
 from pathlib import Path
 from collections import defaultdict
-from sidecar.eegJSON import eegJSON
-from sidecar.sessionsTSV import SessionsTSV
-from sidecar.channelsTSV import ChannelsTSV
+from sidecar.EegJSON import EegJSON
+from sidecar.SessionsTSV import SessionsTSV
+from sidecar.ChannelsTSV import ChannelsTSV
+
+import sys, os, pprint
+print("PYTHON EXE:", sys.executable)
+print("PYTHONPATH env:", os.environ.get("PYTHONPATH"))
+pprint.pp(sys.path[:10])
 
 # ==== Helper Functions ==== #
 def find_bids_path(output_dir):
@@ -21,20 +26,20 @@ def find_bids_path(output_dir):
     path = []
     output_path = Path(output_dir)
     
-    # Pattern: output/PRV-{patient_id}/primary/sub-PRV-{patient_id}/ses-visit-m{age}/eeg/
+    # Pattern: output/PRV-{patient_id}/primary/sub-{patient_id}/ses-visit{age}m/eeg/
     for dataset_dir in output_path.glob("PRV-*"):
         patient_id = dataset_dir.name.replace("PRV-", "")
         
         # Navigate to subject directory
-        subject_dir = dataset_dir / "primary" / f"sub-PRV-{patient_id}"
+        subject_dir = dataset_dir / "primary" / f"sub-{patient_id}"
         
         if not subject_dir.exists():
             continue
         
         # Find all session directories
-        for session_dir in subject_dir.glob("ses-visit-m*"):
-            # Extract age from session name (ses-visit-m15 -> 15)
-            age = session_dir.name.replace("ses-visit-m", "")
+        for session_dir in subject_dir.glob("ses-visit*m"):
+            # Extract age from session name (ses-visit15m -> 15)
+            age = session_dir.name.replace("ses-visit", "").replace("m", "")
             
             # Check for eeg directory
             eeg_dir = session_dir / "eeg"
@@ -87,14 +92,14 @@ def handle_eeg_json(path_info, output_base_dir):
     '''
     
     # Calculate the bids_path relative to output_base_dir
-    # We want: PRV-{patient_id}/primary/sub-PRV-{patient_id}/ses-visit-m{age}/eeg/
-    bids_path = f"PRV-{patient_id}/primary/sub-PRV-{patient_id}/ses-visit-m{age}/eeg/"
+    # We want: PRV-{patient_id}/primary/sub-{patient_id}/ses-visit{age}m/eeg/
+    bids_path = f"PRV-{patient_id}/primary/sub-{patient_id}/ses-visit{age}m/eeg/"
     
-    # Create custom filename following BIDS format: sub-PRV-<ptid>-<age>_task-rest_eeg.json
-    custom_filename = f"sub-PRV-{patient_id}-{age}_task-rest_eeg.json"
+    # Create custom filename following new naming format: sub-<ptid>_ses-visit<age>m_task-prv_eeg.json
+    custom_filename = f"sub-{patient_id}_ses-visit{age}m_task-prv_eeg.json"
     
     # Create sidecar with extracted data (or defaults)
-    eeg_sidecar = eegJSON(
+    eeg_sidecar = EegJSON(
         fields=edf_data,
         bids_path=bids_path,
         filename=custom_filename
@@ -133,16 +138,16 @@ def handle_sessions_tsv(patient_id, sessions_data, output_base_dir):
         visit_type = "baseline" if i == 0 else "followup"
         
         rows.append({
-            "session": f"ses-visit-m{age}",
+            "session": f"ses-visit{age}m",
             "visit_type": visit_type,
             "age_in_months": float(age)
         })
     
-    # Calculate bids_path: PRV-{patient_id}/primary/sub-PRV-{patient_id}/
-    bids_path = f"PRV-{patient_id}/primary/sub-PRV-{patient_id}/"
+    # Calculate bids_path: PRV-{patient_id}/primary/sub-{patient_id}/
+    bids_path = f"PRV-{patient_id}/primary/sub-{patient_id}/"
     
     # Create custom filename
-    custom_filename = f"sub-PRV-{patient_id}_sessions.tsv"
+    custom_filename = f"sub-{patient_id}_sessions.tsv"
     
     # Create sidecar
     sessions_sidecar = SessionsTSV(
@@ -211,11 +216,11 @@ def handle_channels_tsv(path_info, output_base_dir):
             "notch": "n/a"
         })
     
-    # Calculate bids_path: PRV-{patient_id}/primary/sub-PRV-{patient_id}/ses-visit-m{age}/eeg/
-    bids_path = f"PRV-{patient_id}/primary/sub-PRV-{patient_id}/ses-visit-m{age}/eeg/"
+    # Calculate bids_path: PRV-{patient_id}/primary/sub-{patient_id}/ses-visit{age}m/eeg/
+    bids_path = f"PRV-{patient_id}/primary/sub-{patient_id}/ses-visit{age}m/eeg/"
     
-    # Create custom filename: sub-PRV-<ptid>-<age>_task-rest_channels.tsv
-    custom_filename = f"sub-PRV-{patient_id}-{age}_task-rest_channels.tsv"
+    # Create custom filename: sub-<ptid>_ses-visit<age>m_task-prv_channels.tsv
+    custom_filename = f"sub-{patient_id}_ses-visit{age}m_task-prv_channels.tsv"
     
     # Create sidecar
     channels_sidecar = ChannelsTSV(
