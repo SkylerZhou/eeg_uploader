@@ -133,14 +133,17 @@ def handle_sessions_tsv(patient_id, sessions_data, output_base_dir):
     # Create TSV rows
     rows = []
     for i, session in enumerate(sorted_sessions):
-        age = session['age']
-        # First session is baseline, rest are followup
-        visit_type = "baseline" if i == 0 else "followup"
+        age = float(session['age'])
+        # Baseline only if it's the smallest age AND age is between 1.5 to 6 months
+        if i == 0 and 1.5 <= age <= 6:
+            visit_type = "baseline"
+        else:
+            visit_type = "followup"
         
         rows.append({
-            "session": f"ses-visit{age}m",
+            "session": f"ses-visit{int(age)}m",
             "visit_type": visit_type,
-            "age_in_months": float(age)
+            "age_in_months": age
         })
     
     # Calculate bids_path: PRV-{patient_id}/primary/sub-{patient_id}/
